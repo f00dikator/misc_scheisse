@@ -1,33 +1,42 @@
 import logging
 import os
-import re
-import pdb
-import json
 import sys, paramiko
-import SSH
 
 
 class SSH:
-
     def __init__(self, CREDS):
         self.hostname = CREDS['host']
         self.port = CREDS['port']
         self.user = CREDS['user']
-        self.password = CREDS['passwd']
+
+        try:
+            self.password = CREDS['passwd']
+        except:
+            self.password = None
+        try:
+            self.key = CREDS['key']
+        except:
+            self.key = None
 
 
     def connect_to_ssh(self):
         ret = False
+
+        if self.key:
+            key = paramiko.RSAKey.from_private_key_file(self.key)
    
         try:
             self.client = paramiko.SSHClient()
             self.client.load_system_host_keys()
             self.client.set_missing_host_key_policy(paramiko.WarningPolicy)
-            self.client.connect(self.hostname, port=self.port, username=self.user, password=self.password)
+            if key:
+                self.client.connect(self.hostname, port=self.port, username=self.user, pkey=key)
+            else:
+                self.client.connect(self.hostname, port=self.port, username=self.user, password=self.password)
             ret = True
 
         except:
-            logging.error("Failed to connect to {}".format(CREDS['host']))
+            logging.error("Failed to connect to {}".format(self.hostname))
             return ret
 
         return ret
