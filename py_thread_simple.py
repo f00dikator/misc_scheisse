@@ -13,12 +13,12 @@ def function(thing1, thing2):
 
 def test():
     thread = {}
-    end = 12
+    end = 32
     init = time.time()
     thing2 = "thing2"
     cumulative = []
     global thread_wasteland
-    thread_count = 8
+    thread_count = 16
     counter = 1
 
     for foo in range (0, end):

@@ -1,16 +1,11 @@
 # -*- coding: utf-8 -*-
-# This script is Copyright (C) 2019 Tenable Network Security, Inc.
-# Date: 6/4/2019
 
 __author__ = 'John Lampe'
-__email__ = 'jlampe@tenable.com'
-
 
 
 import logging
 import os
 import sys, paramiko
-import pdb
 
 
 class SSH:

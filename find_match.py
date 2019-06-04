@@ -1,6 +1,10 @@
 import difflib
+import pdb
 
 def main():
+
+    foo = find_longest_match("The man went to the store", "went to the")
+    print(foo)
     # minimum_match_len = 5
 
     # open csv and identify which columns we have

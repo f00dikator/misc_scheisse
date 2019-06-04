@@ -6,7 +6,7 @@ struct sockaddr_in {
     unsigned short sin_port;
     in_addr_t  sin_addr;
     char sin_zero[8];
-};
+}; 
 
 syscall::connect:entry 
 /arg2 == sizeof(struct sockaddr_in)/
