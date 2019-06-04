@@ -1,6 +1,16 @@
+# -*- coding: utf-8 -*-
+# This script is Copyright (C) 2019 Tenable Network Security, Inc.
+# Date: 6/4/2019
+
+__author__ = 'John Lampe'
+__email__ = 'jlampe@tenable.com'
+
+
+
 import logging
 import os
 import sys, paramiko
+import pdb
 
 
 class SSH:
@@ -19,6 +29,11 @@ class SSH:
             self.key = None
 
 
+
+    def close(self):
+        self.client.close()
+
+
     def connect_to_ssh(self):
         ret = False
 
@@ -29,14 +44,14 @@ class SSH:
             self.client = paramiko.SSHClient()
             self.client.load_system_host_keys()
             self.client.set_missing_host_key_policy(paramiko.WarningPolicy)
-            if key:
-                self.client.connect(self.hostname, port=self.port, username=self.user, pkey=key)
+            if self.key:
+                self.client.connect(self.hostname, port=self.port, username=self.user, pkey=self.key)
             else:
-                self.client.connect(self.hostname, port=self.port, username=self.user, password=self.password)
+                self.client.connect(self.hostname, port=self.port, username=self.user, password=self.password, timeout=5)
             ret = True
 
-        except:
-            logging.error("Failed to connect to {}".format(self.hostname))
+        except Exception as e:
+            logging.error("Failed to connect to {} : {}".format(self.hostname, e))
             return ret
 
         return ret
@@ -47,6 +62,7 @@ class SSH:
         ret = None
 
         try:
+            print("*) Executing command {}".format(cmd))
             stdin, stdout, stderr = self.client.exec_command(cmd)
             ret = stdout.read()
 
