@@ -24,10 +24,13 @@ def smash(email):
     return ret
 
 
+try:
+    with open("emailaddrs.txt", "r") as fd:
+        for line in fd:
+            email = line.strip()
+            ret = smash(email)
+            if ret:
+                print("b00m {} {}".format(email,ret))
+except:
+    print("You need to create an emailaddrs.txt file and put all the emails in there, one email per line")
 
-with open("emailaddrs.txt", "r") as fd:
-    for line in fd:
-        email = line.strip()
-        ret = smash(email)
-        if ret:
-            print("b00m {} {}".format(email,ret))
