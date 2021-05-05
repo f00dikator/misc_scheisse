@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# This script is Copyright (C) 2020 Tenable Inc.
 
 __author__ = 'John Lampe'
 __version__ = '1.0.0'
