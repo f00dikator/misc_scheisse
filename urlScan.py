@@ -3,7 +3,7 @@ import json
 import logging
 import time
 
-class whois_client:
+class urlscan_client:
     def __init__(self, api_key, visibility="public", verify=False):
         self.init_base_url = "https://urlscan.io/api/v1/scan/"
         self.results_base_url = "https://urlscan.io/api/v1/result/"
