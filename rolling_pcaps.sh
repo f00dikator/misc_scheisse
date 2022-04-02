@@ -9,7 +9,7 @@ while :
             do echo $i ;
             tcpdump -i enp2s0 -G 15 -W 1 -s0 -w $(date --date='-1 hour' +\%Y-\%m-\%d-\%s).pcap ;
         done;
-        find . -name \*.pcap -type f -mtime +1 -delete;
+        find . -name \*.pcap -type f -mtime 1 -delete;
     done
 
 
