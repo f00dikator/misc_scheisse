@@ -31,7 +31,7 @@ result = send_packet(bpfdoor, pcap_active:TRUE, pcap_filter:pfilter, pcap_timeou
 
 if (result)
 {
-    display("Got a result\n");
+    display(string("Got a response from ", get_host_ip(), " : " , result, "\n"));
     exit(0);
 } else {
     display("No results\n");
