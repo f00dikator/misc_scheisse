@@ -1,4 +1,5 @@
 import pyshark
+import sys
 
 def parse_guac_message(raw_msg):
     tokens = []
@@ -29,4 +30,4 @@ def extract_guac_websocket(pcap_file):
             print(f"Error: {e}")
 
 # Run the parser
-extract_guac_websocket('guac_decrypted.pcap')
+extract_guac_websocket(sys.argv[1])
