@@ -1,85 +1,77 @@
-import subprocess
-import binascii
-import csv
+from scapy.all import rdpcap, TCP
+import struct
 import sys
-import pdb
 
-PCAP_FILE = "guac_decrypted.pcap"
-TSHARK_FIELDS = ["frame.number", "ip.src", "ip.dst", "tcp.payload"]
-TSHARK_FILTER = "websocket"
-
-def run_tshark(pcap_file):
-    cmd = [
-        "tshark", "-r", pcap_file,
-        "-Y", TSHARK_FILTER,
-        "-T", "fields"
-    ]
-    for field in TSHARK_FIELDS:
-        cmd += ["-e", field]
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"TShark failed: {result.stderr}")
-    return result.stdout.strip().splitlines()
-
-def parse_guac_message(raw_msg):
-    tokens = []
+def parse_websocket_frame(data):
+    messages = []
     i = 0
-    parts = raw_msg.split(';')
-    while i < len(parts) - 1:
-        try:
-            length = int(parts[i])
-            token = parts[i + 1][:length]
-            tokens.append(token)
-            i += 2
-        except ValueError:
+    while i < len(data):
+        if len(data) < i + 2:
             break
-    return tokens
 
-def decode_payload(hex_payload):
-    try:
-        raw_bytes = binascii.unhexlify(hex_payload.replace(':', ''))
-        decoded = raw_bytes.decode('utf-8', errors='replace')
-        return parse_guac_message(decoded)
-    except Exception as e:
-        return [f"Error decoding: {e}"]
+        byte1, byte2 = data[i], data[i+1]
+        fin = byte1 >> 7
+        opcode = byte1 & 0x0F
+        masked = byte2 >> 7
+        payload_len = byte2 & 0x7F
+        i += 2
 
-def process_frames(lines):
-    decoded_frames = []
-    for line in lines:
-        fields = line.split('\t')
-        if len(fields) != len(TSHARK_FIELDS):
-            continue
-        frame_num, ip_src, ip_dst, hex_payload = fields
-        tokens = decode_payload(hex_payload)
-        decoded_frames.append({
-            "frame": frame_num,
-            "src": ip_src,
-            "dst": ip_dst,
-            "tokens": tokens
-        })
-    return decoded_frames
+        if payload_len == 126:
+            if len(data) < i + 2:
+                break
+            payload_len = struct.unpack(">H", data[i:i+2])[0]
+            i += 2
+        elif payload_len == 127:
+            if len(data) < i + 8:
+                break
+            payload_len = struct.unpack(">Q", data[i:i+8])[0]
+            i += 8
 
-def save_to_csv(decoded_frames, output_file="guac_tokens.csv"):
-    with open(output_file, "w", newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(["Frame", "Source IP", "Destination IP", "Tokens"])
-        for frame in decoded_frames:
-            writer.writerow([
-                frame["frame"],
-                frame["src"],
-                frame["dst"],
-                "|".join(frame["tokens"])
-            ])
+        if masked:
+            if len(data) < i + 4:
+                break
+            masking_key = data[i:i+4]
+            i += 4
+        else:
+            masking_key = None
 
-def main():
-    PCAP_FILE = sys.argv[1]
-    print(f"Running TShark on {PCAP_FILE}...")
-    lines = run_tshark(PCAP_FILE)
-    print(f"Processing {len(lines)} frames...")
-    decoded = process_frames(lines)
-    save_to_csv(decoded)
-    print(f"Saved decoded tokens to guac_tokens.csv")
+        if len(data) < i + payload_len:
+            break
 
-if __name__ == "__main__":
-    main()
+        payload = bytearray(data[i:i+payload_len])
+        i += payload_len
+
+        if masked:
+            for j in range(payload_len):
+                payload[j] ^= masking_key[j % 4]
+
+        if opcode == 0x1:  # text frame
+            try:
+                messages.append(payload.decode("utf-8"))
+            except UnicodeDecodeError:
+                pass  # ignore invalid UTF-8
+    return messages
+
+def extract_websocket_messages(pcap_file):
+    packets = rdpcap(pcap_file)
+    tcp_streams = {}
+
+    for pkt in packets:
+        if TCP in pkt:
+            ip = pkt[IP].src, pkt[IP].dst
+            ports = pkt[TCP].sport, pkt[TCP].dport
+            stream_id = (ip, ports)
+            payload = bytes(pkt[TCP].payload)
+            if len(payload) > 0:
+                if stream_id not in tcp_streams:
+                    tcp_streams[stream_id] = b""
+                tcp_streams[stream_id] += payload
+
+    for stream_id, data in tcp_streams.items():
+        print(f"\n--- Messages from stream {stream_id} ---")
+        messages = parse_websocket_frame(data)
+        for msg in messages:
+            print(msg)
+
+# Replace with your actual PCAP path
+extract_websocket_messages(sys.argv[1])
